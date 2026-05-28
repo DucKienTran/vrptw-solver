@@ -251,7 +251,7 @@ def load_data(file_name: str, num_customers: int) -> Dict[str, Any]:
 #  TKINTER UI
 
 SHARED_PARAMS = dict(
-    max_nodes           = 2000,
+    max_nodes           = math.inf,
     node_selection      = "best_bound",
     time_limit_per_lp   = 15.0,
     use_initial_heuristic = False,

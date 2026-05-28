@@ -140,39 +140,16 @@ def graph_shrinking(model, x_vars, x_hat, data, max_iter=10, mu=5):
             Sv = supernodes[v]
 
             if Su is not Sv:
-                # ── Kiểm tra trước khi gộp (Pre-merge checks) ────────────────
                 sum_q_new = supernode_demand[u] + supernode_demand[v]
 
-                # Check 1 — Trivial cut: nếu tổng demand <= Q thì k_S = 1,
-                # bất đẳng thức f(S) >= 1 luôn thỏa trong mọi nghiệm VRP hợp lệ
-                # (mỗi tập khách hàng phải có ít nhất 1 xe rời đi)
-                # → gộp nhưng bỏ qua add_capacity_constraint
                 if sum_q_new <= capacity:
                     S_new = Su | Sv
                     for node in S_new:
                         supernodes[node]       = S_new
                         supernode_demand[node] = sum_q_new
-                    continue   # không thể sinh cut có ý nghĩa, bỏ qua
+                    if add_capacity_constraint(model, x_vars, x_hat, S_new, data):
+                        cuts_added += 1
 
-                # Check 2 — Overflow quá lớn: nếu sum_q >> capacity thì k_S lớn
-                # nhưng f_S (luồng ra) cũng sẽ lớn → hiếm khi vi phạm,
-                # đồng thời cut rất "rộng" nên yếu. Bỏ qua để tiết kiệm thời gian.
-                # Ngưỡng thực nghiệm: nếu cần > 4 xe thì bỏ qua
-                # k_S_estimate = math.ceil(sum_q_new / capacity)
-                # if k_S_estimate > 4:
-                #     S_new = Su | Sv
-                #     for node in S_new:
-                #         supernodes[node]       = S_new
-                #         supernode_demand[node] = sum_q_new
-                #     continue
-
-                # ── Gộp và kiểm tra vi phạm ──────────────────────────────────
-                S_new = Su | Sv
-                for node in S_new:
-                    supernodes[node]       = S_new
-                    supernode_demand[node] = sum_q_new
-
-                if add_capacity_constraint(model, x_vars, x_hat, S_new, data):
-                    cuts_added += 1
-
+                else:
+                    continue
     return cuts_added
