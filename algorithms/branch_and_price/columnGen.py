@@ -1,4 +1,3 @@
-Đã dùng 70% bộ nhớ … Nếu hết bộ nhớ, bạn không thể tạo, chỉnh sửa và tải tệp lên. Hãy mua bộ nhớ 30 GB với giá 5.000 ₫ cho 3 tháng thay vì 19.000 ₫.
 import gurobipy as gp
 from gurobipy import GRB
 from .paramsVRP import ParamsVRP
