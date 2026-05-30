@@ -2,6 +2,7 @@ import time
 import math
 import tkinter as tk
 from tkinter import ttk, messagebox
+import copy
 
 from config import (
     MAX_NODES,
@@ -40,7 +41,6 @@ class BenchmarkApp:
         control_frame = tk.Frame(root, bg="#f4f6f9")
         control_frame.pack(pady=10)
 
-        # ── Hàng 0: File path + Customers ────────────────────────────────────────
         tk.Label(control_frame, text="File path:", font=("Helvetica", 10), bg="#f4f6f9").grid(row=0, column=0, padx=5, pady=4, sticky="e")
         self.file_entry = tk.Entry(control_frame, font=("Helvetica", 10), width=14)
         self.file_entry.insert(0, "data/r101.txt")
@@ -51,7 +51,6 @@ class BenchmarkApp:
         self.cust_entry.insert(0, "10")
         self.cust_entry.grid(row=0, column=3, padx=5, pady=4)
 
-        # ── Hàng 1: Max nodes + Button ────────────────────────────────────────
         tk.Label(control_frame, text="Giới hạn node (max_nodes):", font=("Helvetica", 10), bg="#f4f6f9").grid(row=1, column=0, padx=5, pady=4, sticky="e")
         self.max_nodes_entry = tk.Entry(control_frame, font=("Helvetica", 10), width=14)
         self.max_nodes_entry.insert(0, str(MAX_NODES))
@@ -126,7 +125,6 @@ class BenchmarkApp:
 
         solver_kwargs = {**DEFAULT_SOLVER_KWARGS, "max_nodes": max_nodes}
 
-        # ── Load data dùng đúng pipeline như main.py ──────────────────────────
         self.status_label.config(text="[HỆ THỐNG] Đang nạp dữ liệu từ file...", fg="#e67e22")
         self.root.update()
 
@@ -138,12 +136,16 @@ class BenchmarkApp:
             self.status_label.config(text="Trạng thái: Thất bại.", fg="#c0392b")
             return
 
+        # Khởi tạo bản sao dữ liệu cô lập cho từng thuật toán
+        data_for_bb = copy.deepcopy(data)
+        data_for_bc = copy.deepcopy(data)
+
         # ── Branch and Bound ───────────────────────────────────────────────────
         self.status_label.config(text="⚡ Đang tính toán: 1. Pure Branch and Bound...", fg="#9b59b6")
         self.root.update()
 
         t0 = time.time()
-        res_bb = manual_branch_and_bound_vrptw(data=data, **solver_kwargs)
+        res_bb = manual_branch_and_bound_vrptw(data=data_for_bb, **solver_kwargs)
         time_bb = time.time() - t0
 
         # ── Branch and Cut ─────────────────────────────────────────────────────
@@ -151,14 +153,13 @@ class BenchmarkApp:
         self.root.update()
 
         t1 = time.time()
-        res_bc = manual_branch_and_cut_vrptw(data=data, **solver_kwargs)
+        res_bc = manual_branch_and_cut_vrptw(data=data_for_bc, **solver_kwargs)
         time_bc = time.time() - t1
 
         self.status_label.config(text="🎉 Đã xử lý xong dữ liệu đối sánh!", fg="#27ae60")
         self._print_benchmark_console(file_path, num_cust, max_nodes, vehicle_number, capacity, data, res_bb, time_bb, res_bc, time_bc)
         self.display_results(res_bb, time_bb, res_bc, time_bc)
 
-    # ── In kết quả ra console giống main.py ───────────────────────────────────
     def _print_benchmark_console(self, file_path, num_cust, max_nodes, vehicle_number, capacity, data, r_bb, t_bb, r_bc, t_bc):
         print("\n" + "=" * 50)
         print("========== BENCHMARK INSTANCE ==========")
@@ -220,7 +221,6 @@ class BenchmarkApp:
             print(f"{label:<30} {v_bb:>15} {v_bc:>15}")
         print("=" * 62)
 
-    # ── Cập nhật bảng GUI ─────────────────────────────────────────────────────
     def display_results(self, r_bb, t_bb, r_bc, t_bc):
         for item in self.tree.get_children():
             self.tree.delete(item)
