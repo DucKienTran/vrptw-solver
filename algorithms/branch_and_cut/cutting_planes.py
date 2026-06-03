@@ -6,9 +6,6 @@ from gurobipy import quicksum
 def add_capacity_constraint(model, x_vars, x_hat, S, data):
     """
     Kiểm tra và thêm ràng buộc sức chứa nếu phát hiện vi phạm.
-
-    Cut pool lưu dạng: (frozenset(S), k_S) để dedup,
-    nhưng cũng lưu thêm (S_list, k_S) để tái áp dụng lên model mới.
     """
     depot = data["depot"]
     customers = data["customers"]
@@ -20,25 +17,20 @@ def add_capacity_constraint(model, x_vars, x_hat, S, data):
     sum_q = sum(demand[i] for i in S)
     k_S = math.ceil(sum_q / capacity)
 
-    # if k_S <= 1:
-    #     # Không đáng thêm cut nếu chỉ cần 1 xe
-    #     return False
 
     V_minus_S = [j for j in V if j not in S]
     f_S = sum(x_hat.get((i, j), 0.0) for i in S for j in V_minus_S)
 
     if f_S < k_S - 1e-4:
-        # ── Khởi tạo cut pool nếu chưa có ──────────────────────────────────
         if "global_cuts" not in data:
-            data["global_cuts"] = []          # list of (frozenset, k_S)
-            data["global_cuts_raw"] = []      # list of (S_list, k_S) để replay
+            data["global_cuts"] = []
+            data["global_cuts_raw"] = []
 
         key = (frozenset(S), k_S)
         seen_keys = {(fs, k) for fs, k in data["global_cuts"]}
         if key in seen_keys:
             return False
 
-        # ── Thêm vào model hiện tại ─────────────────────────────────────────
         S_list = list(S)
         cut_expr = quicksum(
             x_vars[i, j]
@@ -58,11 +50,37 @@ def add_capacity_constraint(model, x_vars, x_hat, S, data):
 
     return False
 
+def add_static_2_cycle_cuts(model, x_vars, data):
+    """
+    Thêm các ràng buộc loại bỏ chu trình 2 đỉnh (2-cycle elimination): x_ij + x_ji <= 1
+    Chạy O(n^2) một lần duy nhất vào lúc khởi tạo bài toán
+    """
+    if "static_2_cycle_pairs" not in data:
+        customers = data["customers"]
+        n = len(customers)
+        valid_pairs = []
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                u = customers[i]
+                v = customers[j]
+                if (u, v) in x_vars and (v, u) in x_vars:
+                    valid_pairs.append((u, v))
+
+        data["static_2_cycle_pairs"] = valid_pairs
+
+        for u, v in data["static_2_cycle_pairs"]:
+            model.addConstr(
+                x_vars[u, v] + x_vars[v, u] <= 1,
+                name=f"static_2_cycle_{u}_{v}"
+            )
+
+        if data["static_2_cycle_pairs"]:
+            model.update()
 
 def replay_global_cuts(model, x_vars, data):
     """
     Tái áp dụng toàn bộ cuts trong global pool lên một model mới.
-    Gọi ngay sau khi build model, trước vòng lặp cutting plane.
     """
     if "global_cuts_raw" not in data:
         return 0
@@ -97,14 +115,10 @@ def graph_shrinking(model, x_vars, x_hat, data, max_iter=10, mu=5):
     """
     Heuristic Graph Shrinking tìm các tập vi phạm sức chứa.
 
-    Mỗi iteration khởi tạo lại supernodes + danh sách cung L độc lập
-    (đúng theo pseudocode báo cáo), đảm bảo tính ngẫu nhiên thực sự
-    thay vì dùng lại L đã bị pop.
     """
     depot = data["depot"]
     customers = data["customers"]
 
-    # Chỉ xét cung giữa khách hàng (bỏ depot)
     A0 = [
         (i, j)
         for (i, j) in x_vars.keys()
@@ -119,14 +133,13 @@ def graph_shrinking(model, x_vars, x_hat, data, max_iter=10, mu=5):
     depot   = data["depot"]
     V       = customers + [depot]
 
-    # Cache demand tổng theo supernode để tránh tính lại mỗi lần
-    # supernode_demand[id(S)] = sum of demand trong S
+
     cuts_added = 0
 
     for _ in range(max_iter):
-        # ── Khởi tạo lại supernodes cho mỗi iteration ──────────────────────
+        # Khởi tạo lại supernodes cho mỗi iteration
         supernodes       = {v: {v} for v in customers}
-        supernode_demand = {v: demand[v] for v in customers}   # demand theo node đại diện
+        supernode_demand = {v: demand[v] for v in customers}
 
         # Tạo bản sao L mới mỗi iteration, sort giảm dần theo x_hat
         L = sorted(A0, key=lambda arc: x_hat.get(arc, 0.0), reverse=True)
@@ -140,16 +153,14 @@ def graph_shrinking(model, x_vars, x_hat, data, max_iter=10, mu=5):
             Sv = supernodes[v]
 
             if Su is not Sv:
+
                 sum_q_new = supernode_demand[u] + supernode_demand[v]
+                S_new = Su | Sv
+                for node in S_new:
+                    supernodes[node]       = S_new
+                    supernode_demand[node] = sum_q_new
 
-                if sum_q_new <= capacity:
-                    S_new = Su | Sv
-                    for node in S_new:
-                        supernodes[node]       = S_new
-                        supernode_demand[node] = sum_q_new
-                    if add_capacity_constraint(model, x_vars, x_hat, S_new, data):
-                        cuts_added += 1
+                if add_capacity_constraint(model, x_vars, x_hat, S_new, data):
+                    cuts_added += 1
 
-                else:
-                    continue
     return cuts_added

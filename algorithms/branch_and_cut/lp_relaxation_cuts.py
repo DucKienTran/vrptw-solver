@@ -3,7 +3,7 @@ from gurobipy import GRB
 from algorithms.branch_and_bound.node import BBNode
 from models.vrptw_model import build_gurobi_vrptw_model
 from utils.solution import get_solution_values
-from algorithms.branch_and_cut.cutting_planes import graph_shrinking, replay_global_cuts
+from algorithms.branch_and_cut.cutting_planes import graph_shrinking, replay_global_cuts, add_static_2_cycle_cuts
 
 # Giới hạn vòng lặp cutting plane tại mỗi node
 # để tránh lãng phí thời gian khi cuts yếu không cải thiện bound
@@ -19,10 +19,10 @@ def solve_lp_relaxation_with_cuts(
     Giải LP relaxation tại một node B&B, tích hợp cutting plane loop.
 
     Luồng:
-    1. Build model LP
-    2. Replay toàn bộ global cut pool từ các node trước → thắt chặt ngay từ đầu
+    1. Build model LP,
+    2. Replay toàn bộ global cut pool từ các node trước
     3. Cutting plane loop: Graph Shrinking → addConstr → optimize lại
-       (dừng khi không còn cut mới hoặc đạt _MAX_CUT_ROUNDS)
+       dừng khi không còn cut mới hoặc đạt _MAX_CUT_ROUNDS
     4. Trả về nghiệm cuối theo format B&B yêu cầu
     """
 
@@ -37,9 +37,9 @@ def solve_lp_relaxation_with_cuts(
     )
 
     # ── 2. Replay global cut pool lên model mới ─────────────────────────────
-    # Đây là điểm then chốt: cuts tìm được ở các node trước được tái áp dụng
-    # ngay lập tức, giúp cận dưới tại node hiện tại chặt hơn ngay từ lần
-    # optimize đầu tiên.
+    # Thêm n^2 cuts để loại bỏ chu trình con giữa 2 đỉnh nếu trong model đang chưa có
+    add_static_2_cycle_cuts(model, x, data)
+    # gọi lại các cuts đã thêm từ model trước
     replay_global_cuts(model, x, data)
 
     # ── 3. Cutting plane loop ────────────────────────────────────────────────
