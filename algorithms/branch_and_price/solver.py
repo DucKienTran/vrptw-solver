@@ -141,28 +141,7 @@ def _convert_routes_to_original(best_routes, node2idx, depot_end_idx, data):
 
 
 def manual_branch_and_price_vrptw(data: Dict[str, Any], **kwargs) -> Dict[str, Any]:
-    """
-    Giải VRPTW bằng Branch and Price.
 
-    Wrapper chuẩn hoá kết quả về cùng format với B&B và B&C:
-    {
-        "best_obj"            : float,
-        "best_solution"       : {"routes": [...]} | None,
-        "optimal_proved"      : bool,
-        "stopped_by_node_limit": bool,
-        "remaining_nodes"     : int,
-        "stats": {
-            "nodes_solved"   : int,
-            "branch_count"   : int,
-            "pruned_by_bound": int,
-            "lp_infeasible"  : "N/A",
-            "integer_solutions": "N/A",
-            "lp_root_bound"  : float | None,   # cho optimality gap
-            "max_depth"      : "N/A",
-            "log"            : [],
-        }
-    }
-    """
     print("=== Khởi động hệ thống BRANCH AND PRICE ===")
 
     # ── 1. Convert data → ParamsVRP ───────────────────────────────────────────
@@ -205,10 +184,6 @@ def manual_branch_and_price_vrptw(data: Dict[str, Any], **kwargs) -> Dict[str, A
         best_solution = None
 
     # ── 6. Đóng gói stats ─────────────────────────────────────────────────────
-    # lp_root_bound = lowerbound sau khi giải CG tại root node
-    # bp.lowerbound được cập nhật liên tục, giá trị cuối = LB tốt nhất tìm được
-    lp_root_bound = bp.lowerbound if bp.lowerbound > -1e9 else None
-
     stats = {
         "nodes_solved"    : bp.nodes_solved,
         "nodes_popped"    : bp.nodes_solved,
@@ -216,16 +191,31 @@ def manual_branch_and_price_vrptw(data: Dict[str, Any], **kwargs) -> Dict[str, A
         "pruned_by_bound" : bp.pruned_by_bound,
         "lp_infeasible"   : "N/A",
         "integer_solutions": "N/A",
-        "lp_root_bound"   : lp_root_bound,     # dùng để tính optimality gap
         "max_depth"       : "N/A",
         "log"             : [],
     }
 
+    # ── 7. KIỂM TRA GIỚI HẠN THỜI GIAN VÀ CẬP NHẬT TRẠNG THÁI TỐI ƯU ──────────
+    import builtins
+    import time
+
+    # Kiểm tra xem có bị dừng do hết thời gian (timeout) không
+    stopped_by_limit = False
+    if time.time() - getattr(builtins, "GLOBAL_START_TIME", time.time()) >= getattr(builtins, "GLOBAL_TIME_LIMIT", 3600):
+        stopped_by_limit = True
+
+    # Chỉ được công nhận là TỐI ƯU nếu: Có nghiệm (< math.inf) VÀ Không bị ngắt do hết giờ
+    optimal_proved = (opt_cost < math.inf) and (not stopped_by_limit)
+
+    # Đảm bảo trả về global_lower_bound để file main.py tính được Optimality Gap
+    global_lb = bp.lowerbound if bp.lowerbound > -1e9 else None
+
     return {
         "best_obj"             : opt_cost,
         "best_solution"        : best_solution,
-        "optimal_proved"       : opt_cost < math.inf,
-        "stopped_by_node_limit": False,
+        "optimal_proved"       : optimal_proved,
+        "stopped_by_node_limit": stopped_by_limit,
+        "global_lower_bound"   : global_lb,
         "remaining_nodes"      : 0,
         "stats"                : stats,
     }

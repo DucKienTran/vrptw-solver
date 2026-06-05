@@ -42,6 +42,11 @@ class BranchAndBound:
                 self.edges_based_on_branching(user_param, branching.father, recur)
 
     def bb_node(self, user_param, routes, branching, best_routes, depth):
+        import builtins
+        import time
+        if time.time() - getattr(builtins, "GLOBAL_START_TIME", time.time()) >= getattr(builtins, "GLOBAL_TIME_LIMIT", 3600):
+            print(f"[!] TIMEOUT B&P: Ép dừng đệ quy tại Depth = {depth}!")
+            return False
         if branching is not None:
             print(f"[bb_node initiated] Depth = {depth} | routes = {routes}")
 

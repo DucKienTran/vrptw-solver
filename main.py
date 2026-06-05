@@ -56,7 +56,7 @@ def print_full_metrics(result, elapsed_time, method_name):
     obj = result.get("best_obj", math.inf)
     nodes = s.get("nodes_solved", 0)
     pruned = s.get("pruned_by_bound", 0)
-    lb = s.get("lp_lower_bound", None)
+    lb = result.get("global_lower_bound", None)
 
     pruning_rate = f"{pruned / nodes * 100:.1f}%" if nodes > 0 else "N/A"
     time_per_node = f"{elapsed_time / nodes * 1000:.2f} ms" if nodes > 0 else "N/A"
@@ -80,6 +80,19 @@ def print_full_metrics(result, elapsed_time, method_name):
 
 
 def run(args):
+    if args.data_path == DEFAULT_DATA_PATH:
+        user_path = input(f"Nhập đường dẫn file dữ liệu (Mặc định: {DEFAULT_DATA_PATH}): ").strip()
+        if user_path:
+            args.data_path = user_path
+
+    if args.max_customers == DEFAULT_MAX_CUSTOMERS or args.max_customers is None:
+        user_cust = input(f"Nhập số lượng khách hàng muốn giải (Mặc định: {DEFAULT_MAX_CUSTOMERS}): ").strip()
+        if user_cust:
+            args.max_customers = int(user_cust)
+            if args.max_customers == -1:
+                args.max_customers = None
+    # --------------------------------------------------
+
     # Hiển thị bảng lựa chọn nếu chưa truyền qua CLI
     if args.method is None:
         print("\n+" + "="*45 + "+")
@@ -114,7 +127,9 @@ def run(args):
         "time_limit_per_lp": args.time_limit_per_lp,
         "use_initial_heuristic": args.use_initial_heuristic,
     }
-
+    import builtins
+    builtins.GLOBAL_START_TIME = time.time() # Lấy chuẩn thời gian bắt đầu tại đây
+    builtins.GLOBAL_TIME_LIMIT = args.time_limit
     t0 = time.time()
     if args.method == "bnb":
         result = manual_branch_and_bound_vrptw(data=data, **solver_kwargs)
@@ -161,6 +176,8 @@ def parse_args():
     parser.add_argument("--save", action="store_true")
     parser.add_argument("--output-dir", default="results")
     parser.add_argument("--plot", action="store_true")
+
+    parser.add_argument("--time-limit", type=float, default=3600.0, help="Time limit (s)")
 
     args = parser.parse_args()
     if args.max_customers == -1:

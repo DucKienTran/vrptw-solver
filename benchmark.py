@@ -141,10 +141,14 @@ class BenchmarkApp:
             self.status_label.config(text="Trạng thái: Thất bại.", fg="#c0392b")
             return
 
+        import builtins
+        builtins.GLOBAL_TIME_LIMIT = 3600.0
+
         # ── Branch and Bound ───────────────────────────────────────────────────
         self.status_label.config(text="⚡ Đang tính toán: 1. Pure Branch and Bound...", fg="#9b59b6")
         self.root.update()
 
+        builtins.GLOBAL_START_TIME = time.time()
         t0 = time.time()
         res_bb = manual_branch_and_bound_vrptw(data=data, **solver_kwargs)
         time_bb = time.time() - t0
@@ -153,6 +157,7 @@ class BenchmarkApp:
         self.status_label.config(text="⚡ Đang tính toán: 2. Advanced Branch and Cut...", fg="#3498db")
         self.root.update()
 
+        builtins.GLOBAL_START_TIME = time.time()
         t1 = time.time()
         res_bc = manual_branch_and_cut_vrptw(data=data, **solver_kwargs)
         time_bc = time.time() - t1
@@ -161,8 +166,9 @@ class BenchmarkApp:
         self.status_label.config(text="⚡ Đang tính toán: 3. Branch and Price...", fg="#e67e22")
         self.root.update()
 
+        builtins.GLOBAL_START_TIME = time.time()
         t2 = time.time()
-        res_bp = manual_branch_and_price_vrptw(data = data)
+        res_bp = manual_branch_and_price_vrptw(data=data)
         time_bp = time.time() - t2
 
         self.status_label.config(text="🎉 Đã xử lý xong dữ liệu đối sánh!", fg="#27ae60")
@@ -210,10 +216,7 @@ class BenchmarkApp:
             time_per_node_str = "N/A"
 
         # ── Optimality gap: (UB - LB) / UB * 100 (%) ────────────────────────
-        # B&B/B&C: không lưu lp_root_bound → N/A
-        #   (để enable: thêm "lp_root_bound" vào stats của solver B&B/B&C)
-        # B&P: có bp.lowerbound và bp.upperbound được lưu vào stats
-        lb = s.get("lp_lower_bound", None)   # B&P lưu bp.lowerbound vào đây
+        lb = res.get("global_lower_bound", None)
         ub = obj
         if lb is not None and ub not in (math.inf, 0) and isinstance(lb, (int, float)):
             gap = abs(ub - lb) / abs(ub) * 100

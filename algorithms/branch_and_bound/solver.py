@@ -191,12 +191,19 @@ def manual_branch_and_bound_vrptw(
 
     stopped_by_limit = stats["nodes_solved"] >= max_nodes and frontier_size() > 0
     optimal_proved = not stopped_by_limit
+    global_lb = best_obj
 
+    if frontier_size() > 0:
+        if node_selection == "best_bound":
+            global_lb = frontier[0][0]
+        elif node_selection == "dfs":
+            global_lb = min(lp_item["obj"] for lp_item in frontier)
     return {
         "best_obj": best_obj,
         "best_solution": best_solution,
         "optimal_proved": optimal_proved,
         "stopped_by_node_limit": stopped_by_limit,
         "remaining_nodes": frontier_size(),
+        "global_lower_bound": global_lb,
         "stats": stats,
     }
