@@ -2,7 +2,6 @@ import time
 import math
 import tkinter as tk
 from tkinter import ttk, messagebox
-import copy
 
 from config import (
     MAX_NODES,
@@ -12,6 +11,7 @@ from config import (
 )
 from algorithms.branch_and_bound.solver import manual_branch_and_bound_vrptw
 from algorithms.branch_and_cut.solver import manual_branch_and_cut_vrptw
+from algorithms.branch_and_price.solver import manual_branch_and_price_vrptw
 from utils.data_builder import build_vrptw_data
 from utils.io import read_solomon_instance
 
@@ -26,7 +26,7 @@ class BenchmarkApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Hệ Thống Đối Sánh Thuật Toán VRPTW (Academic UI)")
-        self.root.geometry("800x550")
+        self.root.geometry("1050x600")
         self.root.configure(bg="#f4f6f9")
 
         title_label = tk.Label(
@@ -41,6 +41,7 @@ class BenchmarkApp:
         control_frame = tk.Frame(root, bg="#f4f6f9")
         control_frame.pack(pady=10)
 
+        # ── Hàng 0: File path + Customers ────────────────────────────────────────
         tk.Label(control_frame, text="File path:", font=("Helvetica", 10), bg="#f4f6f9").grid(row=0, column=0, padx=5, pady=4, sticky="e")
         self.file_entry = tk.Entry(control_frame, font=("Helvetica", 10), width=14)
         self.file_entry.insert(0, "data/r101.txt")
@@ -51,6 +52,7 @@ class BenchmarkApp:
         self.cust_entry.insert(0, "10")
         self.cust_entry.grid(row=0, column=3, padx=5, pady=4)
 
+        # ── Hàng 1: Max nodes + Button ────────────────────────────────────────
         tk.Label(control_frame, text="Giới hạn node (max_nodes):", font=("Helvetica", 10), bg="#f4f6f9").grid(row=1, column=0, padx=5, pady=4, sticky="e")
         self.max_nodes_entry = tk.Entry(control_frame, font=("Helvetica", 10), width=14)
         self.max_nodes_entry.insert(0, str(MAX_NODES))
@@ -89,17 +91,19 @@ class BenchmarkApp:
 
         self.tree = ttk.Treeview(
             table_frame,
-            columns=("Metric", "BB", "BC"),
+            columns=("Metric", "BB", "BC", "BP"),
             show="headings",
-            height=8,
+            height=14,
         )
         self.tree.heading("Metric", text="METRICS")
-        self.tree.heading("BB", text="BRANCH AND BOUND (B&B)")
-        self.tree.heading("BC", text="BRANCH AND CUT (B&C)")
+        self.tree.heading("BB", text="BRANCH & BOUND")
+        self.tree.heading("BC", text="BRANCH & CUT")
+        self.tree.heading("BP", text="BRANCH & PRICE")
 
-        self.tree.column("Metric", width=320, anchor="w")
-        self.tree.column("BB", width=200, anchor="center")
-        self.tree.column("BC", width=200, anchor="center")
+        self.tree.column("Metric", width=280, anchor="w")
+        self.tree.column("BB",     width=180, anchor="center")
+        self.tree.column("BC",     width=180, anchor="center")
+        self.tree.column("BP",     width=180, anchor="center")
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         style = ttk.Style()
@@ -125,6 +129,7 @@ class BenchmarkApp:
 
         solver_kwargs = {**DEFAULT_SOLVER_KWARGS, "max_nodes": max_nodes}
 
+        # ── Load data dùng đúng pipeline như main.py ──────────────────────────
         self.status_label.config(text="[HỆ THỐNG] Đang nạp dữ liệu từ file...", fg="#e67e22")
         self.root.update()
 
@@ -136,16 +141,12 @@ class BenchmarkApp:
             self.status_label.config(text="Trạng thái: Thất bại.", fg="#c0392b")
             return
 
-        # Khởi tạo bản sao dữ liệu cô lập cho từng thuật toán
-        data_for_bb = copy.deepcopy(data)
-        data_for_bc = copy.deepcopy(data)
-
         # ── Branch and Bound ───────────────────────────────────────────────────
         self.status_label.config(text="⚡ Đang tính toán: 1. Pure Branch and Bound...", fg="#9b59b6")
         self.root.update()
 
         t0 = time.time()
-        res_bb = manual_branch_and_bound_vrptw(data=data_for_bb, **solver_kwargs)
+        res_bb = manual_branch_and_bound_vrptw(data=data, **solver_kwargs)
         time_bb = time.time() - t0
 
         # ── Branch and Cut ─────────────────────────────────────────────────────
@@ -153,15 +154,97 @@ class BenchmarkApp:
         self.root.update()
 
         t1 = time.time()
-        res_bc = manual_branch_and_cut_vrptw(data=data_for_bc, **solver_kwargs)
+        res_bc = manual_branch_and_cut_vrptw(data=data, **solver_kwargs)
         time_bc = time.time() - t1
 
-        self.status_label.config(text="🎉 Đã xử lý xong dữ liệu đối sánh!", fg="#27ae60")
-        self._print_benchmark_console(file_path, num_cust, max_nodes, vehicle_number, capacity, data, res_bb, time_bb, res_bc, time_bc)
-        self.display_results(res_bb, time_bb, res_bc, time_bc)
+        # ── Branch and Price ───────────────────────────────────────────────────
+        self.status_label.config(text="⚡ Đang tính toán: 3. Branch and Price...", fg="#e67e22")
+        self.root.update()
 
-    def _print_benchmark_console(self, file_path, num_cust, max_nodes, vehicle_number, capacity, data, r_bb, t_bb, r_bc, t_bc):
-        print("\n" + "=" * 50)
+        t2 = time.time()
+        res_bp = manual_branch_and_price_vrptw(data = data)
+        time_bp = time.time() - t2
+
+        self.status_label.config(text="🎉 Đã xử lý xong dữ liệu đối sánh!", fg="#27ae60")
+        self._print_benchmark_console(
+            file_path, num_cust, max_nodes, vehicle_number, capacity, data,
+            res_bb, time_bb, res_bc, time_bc, res_bp, time_bp,
+        )
+        self.display_results(res_bb, time_bb, res_bc, time_bc, res_bp, time_bp)
+
+    # ── Helper: tính metrics từ result dict ──────────────────────────────────
+    @staticmethod
+    def _compute_metrics(res, elapsed):
+        """
+        Chuẩn hoá và tính thêm các metrics từ result dict của bất kỳ solver nào.
+        Trả về dict với tất cả metrics cần hiển thị.
+        """
+        s      = res.get("stats", {})
+        obj    = res.get("best_obj", math.inf)
+        nodes  = s.get("nodes_solved", 0)
+        pruned = s.get("pruned_by_bound", 0)
+
+        # ── Metrics cơ bản ────────────────────────────────────────────────────
+        obj_str     = f"{obj:.4f}" if obj != math.inf else "No Sol"
+        time_str    = f"{elapsed:.4f}"
+        nodes_str   = str(nodes)
+        branch_str  = str(s.get("branch_count", "N/A"))
+        pruned_str  = str(pruned)
+        infeas_str  = str(s.get("lp_infeasible", "N/A"))
+        int_sol_str = str(s.get("integer_solutions", "N/A"))
+        optimal_str = str(res.get("optimal_proved", "N/A"))
+
+        # ── Pruning rate: pruned / nodes (%) ─────────────────────────────────
+        # Ý nghĩa: B&C có pruning rate cao hơn B&B nếu cuts thắt chặt bound tốt
+        if isinstance(nodes, int) and nodes > 0 and isinstance(pruned, int):
+            pruning_rate_str = f"{pruned / nodes * 100:.1f}%"
+        else:
+            pruning_rate_str = "N/A"
+
+        # ── Time per node (ms) ────────────────────────────────────────────────
+        # Ý nghĩa: B&C chậm hơn/node do overhead cutting plane loop
+        # B&P chậm hơn/node do Column Generation (SPPRC) tại mỗi node
+        if isinstance(nodes, int) and nodes > 0:
+            time_per_node_str = f"{elapsed / nodes * 1000:.2f} ms"
+        else:
+            time_per_node_str = "N/A"
+
+        # ── Optimality gap: (UB - LB) / UB * 100 (%) ────────────────────────
+        # B&B/B&C: không lưu lp_root_bound → N/A
+        #   (để enable: thêm "lp_root_bound" vào stats của solver B&B/B&C)
+        # B&P: có bp.lowerbound và bp.upperbound được lưu vào stats
+        lb = s.get("lp_lower_bound", None)   # B&P lưu bp.lowerbound vào đây
+        ub = obj
+        if lb is not None and ub not in (math.inf, 0) and isinstance(lb, (int, float)):
+            gap = abs(ub - lb) / abs(ub) * 100
+            opt_gap_str = f"{gap:.2f}%"
+        else:
+            opt_gap_str = "N/A"
+
+        return {
+            "obj"              : obj_str,
+            "time"             : time_str,
+            "nodes"            : nodes_str,
+            "branches"         : branch_str,
+            "pruned"           : pruned_str,
+            "pruning_rate"     : pruning_rate_str,
+            "infeasible"       : infeas_str,
+            "time_per_node"    : time_per_node_str,
+            "integer_solutions": int_sol_str,
+            "opt_gap"          : opt_gap_str,
+            "optimal"          : optimal_str,
+        }
+
+    # ── In kết quả ra console ─────────────────────────────────────────────────
+    def _print_benchmark_console(
+            self, file_path, num_cust, max_nodes, vehicle_number, capacity, data,
+            r_bb, t_bb, r_bc, t_bc, r_bp, t_bp,
+    ):
+        m_bb = self._compute_metrics(r_bb, t_bb)
+        m_bc = self._compute_metrics(r_bc, t_bc)
+        m_bp = self._compute_metrics(r_bp, t_bp)
+
+        print("\n" + "=" * 62)
         print("========== BENCHMARK INSTANCE ==========")
         print(f"Data path      = {file_path}")
         print(f"Max customers  = {num_cust}")
@@ -171,79 +254,102 @@ class BenchmarkApp:
         print(f"Nodes          = {len(data['nodes'])}")
         print(f"Customers      = {len(data['customers'])}")
 
-        print("\n========== BRANCH AND BOUND RESULT ==========")
-        print(f"best_obj           = {r_bb['best_obj']}")
-        print(f"has_solution       = {r_bb['best_solution'] is not None}")
-        print(f"optimal_proved     = {r_bb['optimal_proved']}")
-        print(f"stopped_node_limit = {r_bb['stopped_by_node_limit']}")
-        print(f"remaining_nodes    = {r_bb['remaining_nodes']}")
-        print(f"time               = {t_bb:.4f}s")
-        print("Stats:")
-        for k, v in r_bb["stats"].items():
-            if k != "log":
-                print(f"  {k}: {v}")
-        if r_bb["best_solution"] is not None:
-            print("Routes:")
-            for idx, route in enumerate(r_bb["best_solution"]["routes"], 1):
-                print(f"  Route {idx}: " + " -> ".join(map(str, route)))
+        # In chi tiết từng thuật toán
+        for label, res, t, m in [
+            ("BRANCH AND BOUND",  r_bb, t_bb, m_bb),
+            ("BRANCH AND CUT",    r_bc, t_bc, m_bc),
+            ("BRANCH AND PRICE",  r_bp, t_bp, m_bp),
+        ]:
+            print(f"\n========== {label} RESULT ==========")
+            print(f"best_obj       = {res['best_obj']}")
+            print(f"has_solution   = {res['best_solution'] is not None}")
+            print(f"optimal_proved = {res['optimal_proved']}")
+            print(f"time           = {t:.4f}s")
+            print("Stats:")
+            for k, v in res["stats"].items():
+                if k != "log":
+                    print(f"  {k}: {v}")
+            if res["best_solution"] is not None:
+                routes = (
+                    res["best_solution"]["routes"]
+                    if isinstance(res["best_solution"], dict)
+                    else [r.get_path() for r in res["best_solution"]]
+                )
+                print("Routes:")
+                for idx, route in enumerate(routes, 1):
+                    print(f"  Route {idx}: " + " -> ".join(map(str, route)))
 
-        print("\n========== BRANCH AND CUT RESULT ==========")
-        print(f"best_obj           = {r_bc['best_obj']}")
-        print(f"has_solution       = {r_bc['best_solution'] is not None}")
-        print(f"optimal_proved     = {r_bc['optimal_proved']}")
-        print(f"stopped_node_limit = {r_bc['stopped_by_node_limit']}")
-        print(f"remaining_nodes    = {r_bc['remaining_nodes']}")
-        print(f"time               = {t_bc:.4f}s")
-        print("Stats:")
-        for k, v in r_bc["stats"].items():
-            if k != "log":
-                print(f"  {k}: {v}")
-        if r_bc["best_solution"] is not None:
-            print("Routes:")
-            for idx, route in enumerate(r_bc["best_solution"]["routes"], 1):
-                print(f"  Route {idx}: " + " -> ".join(map(str, route)))
+        # Bảng so sánh tổng hợp
+        W = 18
+        print(f"\n========== COMPARISON SUMMARY ==========")
+        print(f"{'Metric':<35} {'B&B':>{W}} {'B&C':>{W}} {'B&P':>{W}}")
+        print("-" * (35 + W * 3 + 2))
 
-        print("\n========== COMPARISON SUMMARY ==========")
-        print(f"{'Metric':<30} {'B&B':>15} {'B&C':>15}")
-        print("-" * 62)
-        bb_obj = f"{r_bb['best_obj']:.4f}" if r_bb['best_obj'] != math.inf else "No Sol"
-        bc_obj = f"{r_bc['best_obj']:.4f}" if r_bc['best_obj'] != math.inf else "No Sol"
         rows = [
-            ("Min cost",         bb_obj,                                     bc_obj),
-            ("Time (s)",         f"{t_bb:.4f}",                              f"{t_bc:.4f}"),
-            ("Nodes solved",     str(r_bb["stats"]["nodes_solved"]),         str(r_bc["stats"]["nodes_solved"])),
-            ("Branches",         str(r_bb["stats"]["branch_count"]),         str(r_bc["stats"]["branch_count"])),
-            ("Pruned nodes",     str(r_bb["stats"]["pruned_by_bound"]),      str(r_bc["stats"]["pruned_by_bound"])),
-            ("Infeasible nodes", str(r_bb["stats"]["lp_infeasible"]),        str(r_bc["stats"]["lp_infeasible"])),
-            ("Optimal proved",   str(r_bb["optimal_proved"]),                str(r_bc["optimal_proved"])),
+            ("Min cost",                    m_bb["obj"],               m_bc["obj"],               m_bp["obj"]),
+            ("Time (s)",                    m_bb["time"],              m_bc["time"],              m_bp["time"]),
+            ("Time / node (ms)",            m_bb["time_per_node"],     m_bc["time_per_node"],     m_bp["time_per_node"]),
+            ("Nodes solved",                m_bb["nodes"],             m_bc["nodes"],             m_bp["nodes"]),
+            ("Branches",                    m_bb["branches"],          m_bc["branches"],          m_bp["branches"]),
+            ("Pruned nodes",                m_bb["pruned"],            m_bc["pruned"],            m_bp["pruned"]),
+            ("Pruning rate (%)",            m_bb["pruning_rate"],      m_bc["pruning_rate"],      m_bp["pruning_rate"]),
+            ("Infeasible nodes",            m_bb["infeasible"],        m_bc["infeasible"],        m_bp["infeasible"]),
+            ("Integer solutions found",     m_bb["integer_solutions"], m_bc["integer_solutions"], m_bp["integer_solutions"]),
+            ("Optimality gap (%)",          m_bb["opt_gap"],           m_bc["opt_gap"],           m_bp["opt_gap"]),
+            ("Optimal proved",              m_bb["optimal"],           m_bc["optimal"],           m_bp["optimal"]),
         ]
-        for label, v_bb, v_bc in rows:
-            print(f"{label:<30} {v_bb:>15} {v_bc:>15}")
-        print("=" * 62)
+        for row_label, v_bb, v_bc, v_bp in rows:
+            print(f"{row_label:<35} {v_bb:>{W}} {v_bc:>{W}} {v_bp:>{W}}")
+        print("=" * (35 + W * 3 + 2))
 
-    def display_results(self, r_bb, t_bb, r_bc, t_bc):
+    # ── Cập nhật bảng GUI ─────────────────────────────────────────────────────
+    def display_results(self, r_bb, t_bb, r_bc, t_bc, r_bp, t_bp):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        bb_obj = f"{r_bb['best_obj']:.4f}" if r_bb['best_obj'] != math.inf else "No Sol"
-        bc_obj = f"{r_bc['best_obj']:.4f}" if r_bc['best_obj'] != math.inf else "No Sol"
+        m_bb = self._compute_metrics(r_bb, t_bb)
+        m_bc = self._compute_metrics(r_bc, t_bc)
+        m_bp = self._compute_metrics(r_bp, t_bp)
 
-        metrics_list = [
-            ("Min cost",         bb_obj,                                     bc_obj),
-            ("Time (s)",         f"{t_bb:.4f}",                              f"{t_bc:.4f}"),
-            ("Nodes solved",     str(r_bb["stats"]["nodes_solved"]),         str(r_bc["stats"]["nodes_solved"])),
-            ("Branches",         str(r_bb["stats"]["branch_count"]),         str(r_bc["stats"]["branch_count"])),
-            ("Pruned nodes",     str(r_bb["stats"]["pruned_by_bound"]),      str(r_bc["stats"]["pruned_by_bound"])),
-            ("Infeasible nodes", str(r_bb["stats"]["lp_infeasible"]),        str(r_bc["stats"]["lp_infeasible"])),
-            ("Optimal proved",   str(r_bb["optimal_proved"]),                str(r_bc["optimal_proved"])),
+        # ── Section headers + data rows ───────────────────────────────────────
+        # Format: (label, bb_val, bc_val, bp_val, is_header)
+        sections = [
+            # Header
+            ("── KẾT QUẢ ──", "", "", "", True),
+            ("Min cost (objective)",        m_bb["obj"],               m_bc["obj"],               m_bp["obj"],               False),
+            ("Optimal proved",              m_bb["optimal"],           m_bc["optimal"],           m_bp["optimal"],           False),
+            ("Optimality gap (%)",          m_bb["opt_gap"],           m_bc["opt_gap"],           m_bp["opt_gap"],           False),
+
+            ("── THỜI GIAN ──", "", "", "", True),
+            ("Total time (s)",              m_bb["time"],              m_bc["time"],              m_bp["time"],              False),
+            ("Time / node (ms)",            m_bb["time_per_node"],     m_bc["time_per_node"],     m_bp["time_per_node"],     False),
+
+            ("── CÂY TÌM KIẾM ──", "", "", "", True),
+            ("Nodes solved",                m_bb["nodes"],             m_bc["nodes"],             m_bp["nodes"],             False),
+            ("Branches",                    m_bb["branches"],          m_bc["branches"],          m_bp["branches"],          False),
+            ("Pruned nodes",                m_bb["pruned"],            m_bc["pruned"],            m_bp["pruned"],            False),
+            ("Pruning rate (%)",            m_bb["pruning_rate"],      m_bc["pruning_rate"],      m_bp["pruning_rate"],      False),
+
+            ("── CHI TIẾT NODE ──", "", "", "", True),
+            ("Infeasible nodes",            m_bb["infeasible"],        m_bc["infeasible"],        m_bp["infeasible"],        False),
+            ("Integer solutions found",     m_bb["integer_solutions"], m_bc["integer_solutions"], m_bp["integer_solutions"], False),
         ]
 
-        for idx, row in enumerate(metrics_list):
-            tag = "even" if idx % 2 == 0 else "odd"
-            self.tree.insert("", tk.END, values=row, tags=(tag,))
+        style = ttk.Style()
+        style.configure("Treeview", font=("Helvetica", 10), rowheight=26)
 
-        self.tree.tag_configure("even", background="#ffffff")
-        self.tree.tag_configure("odd", background="#f9f9f9")
+        for idx, row in enumerate(sections):
+            label, v_bb, v_bc, v_bp, is_header = row
+            if is_header:
+                tag = "header"
+            else:
+                tag = "even" if idx % 2 == 0 else "odd"
+            self.tree.insert("", tk.END, values=(label, v_bb, v_bc, v_bp), tags=(tag,))
+
+        self.tree.tag_configure("header", background="#2c3e50", foreground="white",
+                                font=("Helvetica", 9, "bold"))
+        self.tree.tag_configure("even",   background="#ffffff")
+        self.tree.tag_configure("odd",    background="#f0f4f8")
 
 
 if __name__ == "__main__":

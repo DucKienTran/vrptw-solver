@@ -146,7 +146,10 @@ def manual_branch_and_bound_vrptw(
     lp_root = evaluate_node(root)
 
     if lp_root is not None:
+        stats["lp_root_bound"] = lp_root["obj"]
         add_frontier(lp_root)
+    else:
+        stats["lp_root_bound"] = best_obj
 
     while frontier_size() > 0 and stats["nodes_solved"] < max_nodes:
         current_lp = pop_frontier()
