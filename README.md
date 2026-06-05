@@ -233,7 +233,33 @@ Dự án đã cung cấp sẵn công cụ giao diện trực quan sử dụng th
 * **Chạy tự động:** Khi bấm nút KÍCH HOẠT BENCHMARK, hệ thống sẽ tự động cấp một quỹ thời gian độc lập và lần lượt chạy bài toán qua cả 3 thuật toán: Branch & Bound, Branch & Cut, và Branch & Price.
 * **Báo cáo chi tiết:** Kết thúc quá trình chạy, màn hình sẽ hiển thị một bảng tổng kết so sánh trực tiếp các chỉ số hiệu suất: Chi phí tối ưu (Min cost), Tổng thời gian giải (s), Thời gian trung bình giải 1 node (ms/node), Tỷ lệ cắt nhánh (Pruning rate), và Optimality Gap.
 
-## 8. Tác giả
+## 8. Giải thích các chỉ số đánh giá (Metrics)
+
+Dù chạy riêng lẻ từng thuật toán hay chạy đối sánh qua Benchmark GUI, hệ thống đều trả về một bộ các chỉ số (metrics) chi tiết để đánh giá hiệu năng. Dưới đây là ý nghĩa của các chỉ số và cách phân tích chúng:
+
+### 8.1. Các chỉ số cơ bản (Performance Metrics)
+
+* **Min cost (objective):** Tổng chi phí (thường là tổng quãng đường di chuyển) của phương án điều xe tốt nhất tìm được. Nếu các thuật toán đều chạy đến cùng (`Optimal proved = True`), chúng phải ra cùng một con số (Ví dụ: `216.8406`).
+* **Total time (s):** Tổng thời gian thuật toán thực thi (tính bằng giây).
+* **Time / node (ms):** Thời gian trung bình để xử lý một node trên cây tìm kiếm.
+    * *Đặc trưng:* Thuật toán Branch & Price (B&P) thường tốn rất nhiều thời gian cho mỗi node (hàng chục ngàn ms) vì nó phải giải bài toán con (Pricing Problem/SPPRC) để sinh cột. Ngược lại, B&B và B&C xử lý mỗi node rất nhanh (khoảng 11-13 ms).
+* **Optimality gap (%):** Khoảng cách giữa nghiệm tốt nhất hiện tại (Upper Bound) và giới hạn dưới lý thuyết (Lower Bound).
+    * Gap = `0.00%` nghĩa là thuật toán đã chứng minh được đây là nghiệm tối ưu tuyệt đối, không thể có phương án nào rẻ hơn.
+* **Optimal proved:** Bằng `True` nếu thuật toán đã duyệt xong toàn bộ cây tìm kiếm. Nếu bị ép dừng do hết giờ (Time Limit), giá trị này sẽ là `False` (lúc này Gap thường > 0%).
+
+### 8.2. Các chỉ số về Cây tìm kiếm (Search Tree Metrics)
+
+* **Nodes solved & Branches:** Số lượng trạng thái (node) đã duyệt và số lần phân nhánh.
+* **Pruned nodes & Pruning rate (%):** Số lượng node bị "cắt bỏ" (không thèm duyệt tiếp vì chi phí chắc chắn đắt hơn nghiệm tốt nhất hiện tại) và tỷ lệ cắt tỉa. Tỷ lệ này càng cao chứng tỏ thuật toán càng thông minh trong việc thu hẹp không gian tìm kiếm.
+* **Infeasible nodes:** Số lượng node vi phạm ràng buộc (quá tải trọng, trễ giờ...) bị loại bỏ ngay lập tức.
+* **Integer solutions:** Số lần thuật toán tìm thấy một phương án điều xe hợp lệ (nghiệm nguyên) trong suốt quá trình chạy.
+
+### 8.3. Lộ trình xe (Routes)
+Kết quả trả về cuối cùng luôn bao gồm danh sách các xe được điều động:
+* *Ví dụ:* `Route 1: 0 -> 13 -> 17 -> ... -> 12 -> 0`
+* *Ý nghĩa:* Xe số 1 xuất phát từ Depot (0), giao hàng lần lượt cho các khách 13, 17... và quay trở về Depot (0) hoàn thành chuyến đi.
+
+## 9. Tác giả
 
 Project được thực hiện phục vụ mục đích học tập, nghiên cứu và thử nghiệm thuật toán tối ưu hóa cho bài toán VRPTW.
 
@@ -244,7 +270,7 @@ Topic: Vehicle Routing Problem with Time Windows
 Algorithm: Branch and Bound, Branch and Cut, Branch and Price
 ```
 
-## 9. Tài liệu tham khảo:
+## 10. Tài liệu tham khảo:
 ```aiignore
 1. Kallehauge, B. (2006). *On the vehicle routing problem with time windows* (Luận án Tiến sĩ). Centre for Traffic and Transport, Technical University of Denmark.
 2. Desrochers, M., Desrosiers, J., & Solomon, M. (1992). A New Optimization Algorithm for the Vehicle Routing Problem with Time Windows. *Operations Research*, 40(2), 342-354. https://doi.org/10.1287/opre.40.2.342
