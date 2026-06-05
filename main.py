@@ -3,7 +3,7 @@ import time
 import math
 from pathlib import Path
 import pandas as pd
-
+from utils.visualization import plot_routes, plot_locations
 from algorithms.branch_and_bound.solver import manual_branch_and_bound_vrptw
 from algorithms.branch_and_cut.solver import manual_branch_and_cut_vrptw
 from algorithms.branch_and_price.solver import manual_branch_and_price_vrptw
@@ -158,7 +158,7 @@ def run(args):
     if args.save:
         save_result_summary(Path(args.output_dir), instance_name, args.method, result, routes_df)
 
-    if args.plot and routes:
+    if routes:
         plot_routes(data, routes, title=f"{instance_name} - {args.method}")
 
     return result

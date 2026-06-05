@@ -53,49 +53,58 @@ https://www.sintef.no/projectweb/top/vrptw/100-customers
 
 ## 4. Cấu trúc các thư mục project
 
-```text
 vrptw-solver/
-├── algorithm/
+├── algorithms/                    # Chứa các thuật toán giải quyết bài toán
 │   ├── branch_and_bound/
 │   │   ├── __init__.py
-│   │   ├── node.py              # Định nghĩa BBNode và clone_node
-│   │   ├── lp_relaxation.py     # Giải LP relaxation tại một node
-│   │   ├── branching.py         # Chọn biến phân số và tạo node con
-│   │   └── solver.py            # Manual Branch and Bound 
+│   │   ├── branching.py           # Logic chọn biến phân nhánh
+│   │   ├── lp_relaxation.py       # Giải LP relaxation tại một node
+│   │   ├── node.py                # Định nghĩa cấu trúc BBNode
+│   │   └── solver.py              # Thực thi thuật toán Branch and Bound
 │   │
 │   ├── branch_and_cut/
 │   │   ├── __init__.py
-│   │   └── solver.py            # Baseline Branch and Cut bằng Gurobi MILP
+│   │   ├── cutting_planes.py      # Logic tìm và thêm các mặt cắt (Cuts)
+│   │   ├── lp_relaxation_cuts.py  # Giải LP relaxation có kết hợp mặt cắt
+│   │   └── solver.py              # Thực thi thuật toán Branch and Cut
 │   │
 │   └── branch_and_price/
 │       ├── __init__.py
-│       └── solver.py            # Placeholder cho Branch and Price
+│       ├── branchBound.py         # Quản lý cây tìm kiếm của Branch and Price
+│       ├── columnGen.py           # Logic sinh cột (Column Generation)
+│       ├── paramsVRP.py           # Cấu hình các tham số VRP
+│       ├── route.py               # Quản lý đối tượng tuyến đường
+│       ├── solVisualization.py    # Trực quan hóa tuyến đường riêng cho B&P
+│       ├── solver.py              # Thực thi thuật toán Branch and Price
+│       └── SPPRC.py               # Giải bài toán con (Tìm đường đi ngắn nhất)
 │
-├── data/                         # Đặt C101.txt, R101.txt, RC201.txt...
+├── data/                          # Dataset Solomon (C101.txt, R101.txt...)
 │
-├── docs/
-├── models/
+├── docs/                          # Tài liệu dự án
+│   ├── presentation.pdf           # Slide báo cáo
+│   └── report.pdf                 # Báo cáo chi tiết
+│
+├── models/                        # Xây dựng mô hình toán học
 │   ├── __init__.py
-│   └── vrptw_model.py            # Xây dựng mô hình VRPTW bằng Gurobi
-│
-├── notebooks/                    # Lưu notebook
-├── results/                      # Kết quả chạy 
-│
-├── solvers/
+│   └── vrptw_model.py             # Xây dựng mô hình MILP bằng Gurobi
+│ 
+├── solvers/                       # Gọi solver giải trực tiếp
 │   ├── __init__.py
-│   └── gurobi_direct.py           # Giải trực tiếp MILP bằng Gurobi
+│   └── gurobi_direct.py           # Giải trực tiếp mô hình MILP bằng Gurobi
 │
-├── utils/
+├── utils/                         # Các file tiện ích hỗ trợ
 │   ├── __init__.py
-│   ├── io.py                      # Đọc file Solomon
 │   ├── data_builder.py            # Tạo data dictionary cho VRPTW
-│   ├── solution.py                # Truy vết route, kiểm tra nghiệm, tóm tắt route
-│   └── visualization.py           # Vẽ node và route
+│   ├── io.py                      # Đọc file dữ liệu đầu vào Solomon
+│   ├── solution.py                # Truy vết, kiểm tra và tóm tắt tuyến đường
+│   └── visualization.py           # Vẽ sơ đồ vị trí và lộ trình xe
 │
-├── config.py                      # Cấu hình mặc định
-├── main.py                        # File chạy chính
-├── requirements.txt
-└── .gitignore
+├── .gitignore                     # Cấu hình loại trừ file khi push lên Git
+├── benchmark.py                   # Khởi chạy Hệ thống so sánh thuật toán 
+├── config.py                      # Cấu hình mặc định của hệ thống
+├── main.py                        # File chạy chính chương trình từng thuật toán
+├── README.md                      # Tài liệu giới thiệu và hướng dẫn sử dụng
+└── requirements.txt               # Danh sách các thư viện Python cần cài đặt
 ```
 
 ## 5. Cài đặt môi trường 
@@ -182,113 +191,47 @@ Nếu trong quá trình phát triển có cài thêm thư viện mới, cập nh
 ```bash
 pip freeze > requirements.txt
 ```
+## 7. Cách chạy project
 
-## 7. Cách chạy project 
+Sau khi cài đặt môi trường và các thư viện cần thiết, bạn có hai cách để khởi chạy chương trình: chạy riêng lẻ từng thuật toán qua Terminal hoặc sử dụng giao diện Benchmark để chạy và so sánh tất cả các thuật toán cùng lúc.
 
-Sau khi cài đặt môi trường và các thư viện cần thiết, chương trình có thể được chạy thông qua file `main.py`.
+### 7.1. Chạy riêng lẻ từng thuật toán (Interactive)
 
-Cú pháp tổng quát:
+Để chạy đơn lẻ một phương pháp giải bài toán, bạn khởi chạy file `main.py`. Chương trình đã được thiết kế dưới dạng tương tác, cho phép bạn nhập trực tiếp các thông số cần thiết ngay trên Terminal mà không cần nhớ cú pháp câu lệnh dài dòng.
 
-```bash
-python main.py --data-path <path_to_data> --method <method_name> [OPTIONS]
-```
+**Ví dụ quá trình chạy:**
 
-Trong đó:
+    PS C:\Users\trand\IdeaProjects\vrptw-solver> python main.py
+    Nhập đường dẫn file dữ liệu (Mặc định: data/C101.txt): 
+    Nhập số lượng khách hàng muốn giải (Mặc định: 8):
 
-| Tham số | Ý nghĩa                                                 |
-|---|---------------------------------------------------------|
-| `--data-path` | Đường dẫn tới file dữ liệu Solomon `.txt`               |
-| `--method` | Phương pháp giải bài toán                               |
-| `--max-customers` | Số lượng khách hàng dùng để chạy thử, -1 : lấy toàn bộ  |
-| `--time-limit` | Giới hạn thời gian chạy, tính bằng giây                 |
-| `--save` | Lưu kết quả chạy vào thư mục `results/`                 |
-| `--plot` | Trực quan hóa tuyến đường sau khi giải                  |
+    +=============================================+
+    |         CHỌN PHƯƠNG PHÁP GIẢI VRPTW         |
+    +=============================================+
+    | (1) Branch and Bound (bnb)                  |
+    | (2) Branch and Cut (branch_and_cut)         |
+    | (3) Branch and Price (branch_and_price)     |
+    +---------------------------------------------+
+    Chọn phương pháp thực hiện (1-3): 1
 
-Các phương pháp có thể sử dụng:
+*Lưu ý: Sau khi thuật toán chạy xong và tìm được nghiệm, chương trình sẽ tự động bật một cửa sổ đồ thị trực quan hóa sơ đồ các tuyến xe dựa trên kết quả vừa giải.*
 
-| Method | Ý nghĩa |
-|--------|---|
-| `bnb`  | Chạy thuật toán Branch and Bound |
-| `milp` | Chạy mô hình MILP trực tiếp bằng Gurobi |
-| `bnc`  | Chạy Branch and Cut baseline bằng Gurobi |
-| `bnp`  | Chạy Branch and Price nếu đã được triển khai |
+*(Chạy nhanh bằng cách truyền tham số 1 dòng, ví dụ: python main.py --data-path data/C101.txt --method bnb --max-customers 8)*.
 
 ---
 
-### 7.1. Chạy Branch and Bound
+### 7.2. So sánh tất cả thuật toán (Benchmark)
 
-Ví dụ chạy thuật toán **Branch and Bound** trên instance `C101.txt` với 8 khách hàng đầu tiên:
+Dự án đã cung cấp sẵn công cụ giao diện trực quan sử dụng thư viện Tkinter.
 
-```bash
-python main.py --data-path data/C101.txt --method bnb --max-customers 8
-```
+Để mở Hệ thống so sánh, chạy lệnh sau:
 
-Lưu ý: với số lượng khách hàng lớn, Branch and Bound có thể chạy lâu do số lượng nhánh tăng nhanh.
+    python benchmark.py
 
----
-
-### 7.2. Chạy mô hình MILP bằng Gurobi
-
-Ví dụ chạy mô hình MILP trực tiếp bằng **Gurobi**:
-
-```bash
-python main.py --data-path data/C101.txt --method milp --max-customers 8
-```
-
-Cách chạy này dùng Gurobi để xây dựng và giải trực tiếp mô hình tối ưu của bài toán VRPTW.
-
----
-
-### 7.3. Lưu kết quả
-
-Để lưu kết quả chạy vào thư mục `results/`, thêm tùy chọn `--save`.
-
-Ví dụ:
-
-```bash
-python main.py --data-path data/C101.txt --method bnb --max-customers 8 --save
-```
----
-
-### 7.4. Trực quan hóa tuyến đường
-
-Để vẽ tuyến đường sau khi giải, thêm tùy chọn `--plot`.
-
-Ví dụ chạy Branch and Bound và trực quan hóa tuyến đường:
-
-```bash
-python main.py --data-path data/C101.txt --method bnb --max-customers 8 --plot
-```
-
-Có thể kết hợp vừa lưu kết quả vừa trực quan hóa:
-
-```bash
-python main.py --data-path data/C101.txt --method milp --max-customers 8 --save --plot
-```
-
----
-
-### 7.6. Một số ví dụ chạy thường dùng
-
-Chạy Branch and Bound:
-
-```bash
-python main.py --data-path data/C101.txt --method bnb --max-customers 8
-```
-
-```bash
-python main.py --data-path data/C101.txt --method bnb --max-customers 8 --save --plot
-```
-
-Chạy Gurobi MILP :
-
-```bash
-python main.py --data-path data/C101.txt --method milp --max-customers 8 --plot --save 
-```
-
-```bash
-python main.py --data-path data/C101.txt --method milp --max-customers -1 --time-limit 3600
-```
+**Hoạt động của Giao diện Benchmark:**
+* **Cấu hình trực quan:** Cửa sổ UI cho phép bạn nhập đường dẫn file dữ liệu, số lượng khách hàng và giới hạn node (max nodes) duyệt tối đa.
+* **Chạy tự động:** Khi bấm nút KÍCH HOẠT BENCHMARK, hệ thống sẽ tự động cấp một quỹ thời gian độc lập và lần lượt chạy bài toán qua cả 3 thuật toán: Branch & Bound, Branch & Cut, và Branch & Price.
+* **Báo cáo chi tiết:** Kết thúc quá trình chạy, màn hình sẽ hiển thị một bảng tổng kết so sánh trực tiếp các chỉ số hiệu suất: Chi phí tối ưu (Min cost), Tổng thời gian giải (s), Thời gian trung bình giải 1 node (ms/node), Tỷ lệ cắt nhánh (Pruning rate), và Optimality Gap.
 
 ## 8. Tác giả
 

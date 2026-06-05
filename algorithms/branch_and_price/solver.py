@@ -97,7 +97,7 @@ def _build_params_from_data(data: Dict[str, Any]) -> tuple:
                 continue
             dx   = p.posx[i] - p.posx[j]
             dy   = p.posy[i] - p.posy[j]
-            dist = round(10 * math.sqrt(dx*dx + dy*dy)) / 10.0
+            dist = math.sqrt(dx*dx + dy*dy)
             p.dist_base[i, j] = dist
             p.ttime[i, j]     = dist / p.speed
             if dist < p.verybig - 1e-6 and dist > max_dist:
