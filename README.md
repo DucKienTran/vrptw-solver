@@ -51,61 +51,64 @@ Nguồn dữ liệu chính thức được sử dụng trong project:
 https://www.sintef.no/projectweb/top/vrptw/100-customers
 ```
 
-  ## 4. Cấu trúc các thư mục project
-  
-  vrptw-solver/
-  ├── algorithms/                    # Chứa các thuật toán giải quyết bài toán
-  │   ├── branch_and_bound/
-  │   │   ├── __init__.py
-  │   │   ├── branching.py           # Logic chọn biến phân nhánh
-  │   │   ├── lp_relaxation.py       # Giải LP relaxation tại một node
-  │   │   ├── node.py                # Định nghĩa cấu trúc BBNode
-  │   │   └── solver.py              # Thực thi thuật toán Branch and Bound
-  │   │
-  │   ├── branch_and_cut/
-  │   │   ├── __init__.py
-  │   │   ├── cutting_planes.py      # Logic tìm và thêm các mặt cắt (Cuts)
-  │   │   ├── lp_relaxation_cuts.py  # Giải LP relaxation có kết hợp mặt cắt
-  │   │   └── solver.py              # Thực thi thuật toán Branch and Cut
-  │   │
-  │   └── branch_and_price/
-  │       ├── __init__.py
-  │       ├── branchBound.py         # Quản lý cây tìm kiếm của Branch and Price
-  │       ├── columnGen.py           # Logic sinh cột (Column Generation)
-  │       ├── paramsVRP.py           # Cấu hình các tham số VRP
-  │       ├── route.py               # Quản lý đối tượng tuyến đường
-  │       ├── solVisualization.py    # Trực quan hóa tuyến đường riêng cho B&P
-  │       ├── solver.py              # Thực thi thuật toán Branch and Price
-  │       └── SPPRC.py               # Giải bài toán con (Tìm đường đi ngắn nhất)
-  │
-  ├── data/                          # Dataset Solomon (C101.txt, R101.txt...)
-  │
-  ├── docs/                          # Tài liệu dự án
-  │   ├── presentation.pdf           # Slide báo cáo
-  │   └── report.pdf                 # Báo cáo chi tiết
-  │
-  ├── models/                        # Xây dựng mô hình toán học
-  │   ├── __init__.py
-  │   └── vrptw_model.py             # Xây dựng mô hình MILP bằng Gurobi
-  │ 
-  ├── solvers/                       # Gọi solver giải trực tiếp
-  │   ├── __init__.py
-  │   └── gurobi_direct.py           # Giải trực tiếp mô hình MILP bằng Gurobi
-  │
-  ├── utils/                         # Các file tiện ích hỗ trợ
-  │   ├── __init__.py
-  │   ├── data_builder.py            # Tạo data dictionary cho VRPTW
-  │   ├── io.py                      # Đọc file dữ liệu đầu vào Solomon
-  │   ├── solution.py                # Truy vết, kiểm tra và tóm tắt tuyến đường
-  │   └── visualization.py           # Vẽ sơ đồ vị trí và lộ trình xe
-  │
-  ├── .gitignore                     # Cấu hình loại trừ file khi push lên Git
-  ├── benchmark.py                   # Khởi chạy Hệ thống so sánh thuật toán 
-  ├── config.py                      # Cấu hình mặc định của hệ thống
-  ├── main.py                        # File chạy chính chương trình từng thuật toán
-  ├── README.md                      # Tài liệu giới thiệu và hướng dẫn sử dụng
-  └── requirements.txt               # Danh sách các thư viện Python cần cài đặt
-  ```
+## 4. Cấu trúc các thư mục project
+
+```text
+vrptw-solver/
+├── algorithms/                    # Chứa các thuật toán giải quyết bài toán
+│   ├── branch_and_bound/
+│   │   ├── __init__.py
+│   │   ├── branching.py           # Logic chọn biến phân nhánh
+│   │   ├── lp_relaxation.py       # Giải LP relaxation tại một node
+│   │   ├── node.py                # Định nghĩa cấu trúc BBNode
+│   │   └── solver.py              # Thực thi thuật toán Branch and Bound
+│   │
+│   ├── branch_and_cut/
+│   │   ├── __init__.py
+│   │   ├── cutting_planes.py      # Logic tìm và thêm các mặt cắt (Cuts)
+│   │   ├── lp_relaxation_cuts.py  # Giải LP relaxation có kết hợp mặt cắt
+│   │   └── solver.py              # Thực thi thuật toán Branch and Cut
+│   │
+│   └── branch_and_price/
+│       ├── __init__.py
+│       ├── branchBound.py         # Quản lý cây tìm kiếm của Branch and Price
+│       ├── columnGen.py           # Logic sinh cột (Column Generation)
+│       ├── paramsVRP.py           # Cấu hình các tham số VRP
+│       ├── route.py               # Quản lý đối tượng tuyến đường
+│       ├── solVisualization.py    # Trực quan hóa tuyến đường riêng cho B&P
+│       ├── solver.py              # Thực thi thuật toán Branch and Price
+│       └── SPPRC.py               # Giải bài toán con (Tìm đường đi ngắn nhất)
+│
+├── data/                          # Dataset Solomon (C101.txt, R101.txt...)
+│
+├── docs/                          # Tài liệu dự án
+│   ├── presentation.pdf           # Slide báo cáo
+│   └── report.pdf                 # Báo cáo chi tiết
+│
+├── models/                        # Xây dựng mô hình toán học
+│   ├── __init__.py
+│   └── vrptw_model.py             # Xây dựng mô hình MILP bằng Gurobi
+│ 
+├── notebooks/                     # Thử nghiệm và trực quan hóa kết quả độc lập
+│   └── time_comparison.ipynb      # Jupyter Notebook so sánh thời gian và vẽ biểu đồ
+│
+├── solvers/                       # Gọi solver giải trực tiếp
+│   ├── __init__.py
+│   └── gurobi_direct.py           # Giải trực tiếp mô hình MILP bằng Gurobi
+│
+├── utils/                         # Các file tiện ích hỗ trợ
+│   ├── __init__.py
+│   ├── data_builder.py            # Tạo data dictionary cho VRPTW
+│   ├── io.py                      # Đọc file dữ liệu đầu vào Solomon
+│   ├── solution.py                # Truy vết, kiểm tra và tóm tắt tuyến đường
+│   └── visualization.py           # Vẽ sơ đồ vị trí và lộ trình xe
+│
+├── .gitignore                     # Cấu hình loại trừ file khi push lên Git
+├── benchmark.py                   # Khởi chạy Hệ thống so sánh thuật toán tự động
+├── config.py                      # Cấu hình mặc định của hệ thống
+├── main.py                        # File chạy chính chương trình từng thuật toán
+├── README.md                      # Tài liệu giới thiệu và hướng dẫn sử dụng
+└── requirements.txt               # Danh sách các thư viện Python cần cài đặt
 
 ## 5. Cài đặt môi trường 
 | Thành phần | Khuyến nghị |
