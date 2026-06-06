@@ -36,6 +36,9 @@ def solve_lp_relaxation_with_cuts(
     # ── 2. Replay global cut pool lên model mới ─────────────────────────────
     # Thêm n^2 cuts để loại bỏ chu trình con giữa 2 đỉnh nếu trong model đang chưa có
     add_static_2_cycle_cuts(model, x, data)
+    # Giới hạn Pool chỉ giữ lại 500 mặt cắt mới nhất
+    if "global_cut_pool" in data and isinstance(data["global_cut_pool"], list):
+        data["global_cut_pool"] = data["global_cut_pool"][-500:]
     # gọi lại các cuts đã thêm từ model trước
     replay_global_cuts(model, x, data)
 
