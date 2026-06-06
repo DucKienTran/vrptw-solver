@@ -7,7 +7,7 @@ from algorithms.branch_and_cut.cutting_planes import graph_shrinking, replay_glo
 
 # Giới hạn vòng lặp cutting plane tại mỗi node
 # để tránh lãng phí thời gian khi cuts yếu không cải thiện bound
-_MAX_CUT_ROUNDS = 100
+_MAX_CUT_ROUNDS = 10
 
 
 def solve_lp_relaxation_with_cuts(
