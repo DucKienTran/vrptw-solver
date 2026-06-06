@@ -39,8 +39,23 @@ def solve_lp_relaxation_with_cuts(
     # gọi lại các cuts đã thêm từ model trước
     replay_global_cuts(model, x, data)
 
+    model.optimize()
+
+    # Kiểm tra tính khả thi ngay từ đầu
+    if (
+            model.Status in [GRB.INFEASIBLE, GRB.INF_OR_UNBD, GRB.UNBOUNDED]
+            or model.SolCount == 0
+    ):
+        return {
+            "status": model.Status,
+            "feasible": False,
+            "reason": "Infeasible at root eval",
+            "node": node,
+        }
+
     # ── 3. Cutting plane loop ────────────────────────────────────────────────
-    prev_obj = None
+    prev_obj = float(model.ObjVal)
+
     _MAX_CUT_ROUNDS = 20 if node.depth == 0 else 1
     for cut_round in range(_MAX_CUT_ROUNDS):
         model.optimize()
