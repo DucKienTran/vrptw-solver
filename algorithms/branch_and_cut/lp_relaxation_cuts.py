@@ -7,9 +7,6 @@ from algorithms.branch_and_cut.cutting_planes import graph_shrinking, replay_glo
 
 # Giới hạn vòng lặp cutting plane tại mỗi node
 # để tránh lãng phí thời gian khi cuts yếu không cải thiện bound
-_MAX_CUT_ROUNDS = 10
-
-
 def solve_lp_relaxation_with_cuts(
         data: Dict[str, Any],
         node: BBNode,
@@ -44,7 +41,7 @@ def solve_lp_relaxation_with_cuts(
 
     # ── 3. Cutting plane loop ────────────────────────────────────────────────
     prev_obj = None
-
+    _MAX_CUT_ROUNDS = 20 if node.depth == 0 else 1
     for cut_round in range(_MAX_CUT_ROUNDS):
         model.optimize()
 
